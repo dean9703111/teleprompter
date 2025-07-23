@@ -851,7 +851,7 @@
             refreshKey.value;
             if (!promptBox.value) return 0;
             const total = promptBox.value.scrollHeight - promptBox.value.clientHeight;
-            const pxPerSec = speed.value * 0.15 * 60;
+            const pxPerSec = speed.value * 0.1 * 60; // 修正這裡
             if (pxPerSec <= 0) return 0;
             return Math.ceil(total / pxPerSec);
           });
