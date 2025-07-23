@@ -552,6 +552,10 @@
           <div class="prompt-text">{{ script }}</div>
           <div style="height: 50vh; pointer-events: none; background: transparent;"></div>
         </div>
+        <!-- 右上角顯示預計秒數 -->
+        <div style="position: fixed; top: 60px; right: 32px; z-index: 1100; font-size: 2.2rem; color: #fff; background: rgba(0,0,0,0.35); border-radius: 1em; padding: 0.3em 1.1em; pointer-events: none; text-align: center; min-width: 3.5em;">
+          {{ totalSeconds }}s
+        </div>
       </div>
     </div>
 
@@ -682,6 +686,8 @@
           const speed = ref(10);
           const bgColor = ref('#000000');
           const promptBox = ref(null);
+          // 強制刷新用 key
+          const refreshKey = ref(0);
           // 語言切換
           const language = ref('zh');
           const langPacks = {
@@ -751,7 +757,7 @@
           let rafId = null;
           const scrollStep = () => {
             if (playState.value === 'play' && promptBox.value) {
-              promptBox.value.scrollTop += speed.value * 0.15;
+              promptBox.value.scrollTop += speed.value * 0.1;
               const maxScroll = promptBox.value.scrollHeight - promptBox.value.clientHeight;
               if (promptBox.value.scrollTop >= maxScroll) {
                 playState.value = 'pause';
@@ -814,9 +820,19 @@
             }
           });
 
+          // 監聽 fontSize 變化
+          watch(fontSize, () => {
+            refreshKey.value++;
+          });
+
+          // 監聽 window resize
+          const resizeHandler = () => {
+            refreshKey.value++;
+          };
           onMounted(() => {
             document.addEventListener('fullscreenchange', fsHandler);
             document.addEventListener('keydown', keyHandler);
+            window.addEventListener('resize', resizeHandler);
             // 不要在這裡啟動 rafId，等 playState 變 'play' 再啟動
           });
 
@@ -827,6 +843,17 @@
             }
             document.removeEventListener('fullscreenchange', fsHandler);
             document.removeEventListener('keydown', keyHandler);
+            window.removeEventListener('resize', resizeHandler);
+          });
+
+          // 新增 totalSeconds 計算
+          const totalSeconds = Vue.computed(() => {
+            refreshKey.value;
+            if (!promptBox.value) return 0;
+            const total = promptBox.value.scrollHeight - promptBox.value.clientHeight;
+            const pxPerSec = speed.value * 0.15 * 60;
+            if (pxPerSec <= 0) return 0;
+            return Math.ceil(total / pxPerSec);
           });
 
           return {
@@ -848,6 +875,7 @@
             // 語言切換
             language,
             langPack,
+            totalSeconds,
           };
         },
         components: {
