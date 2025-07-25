@@ -517,6 +517,63 @@
         height: 1em;
         flex-shrink: 0;
       }
+      @media (min-width: 901px) {
+        .page-full-container .controls {
+          font-size: 1.3rem;
+        }
+      }
+      @media (min-width: 901px) {
+        .page-full-container .controls {
+          font-size: 1.08rem;
+        }
+      }
+      @media (max-width: 900px) and (min-width: 601px) {
+        .page-full-container .controls {
+          font-size: 1rem;
+        }
+      }
+      @media (max-width: 600px) {
+        .page-full-container .controls {
+          font-size: 0.95rem;
+        }
+      }
+      .page-full-container .controls input[type="number"] {
+        width: 4.5em;
+        min-width: 3.5em;
+        font-size: 1em;
+      }
+      @media (min-width: 901px) {
+        .page-full-container .controls input[type="number"] {
+          width: 5.5em;
+          min-width: 4.5em;
+          font-size: 1.2em;
+        }
+      }
+      .page-full-container .controls input[type="range"] {
+        width: 6em;
+        min-width: 4em;
+      }
+      @media (min-width: 901px) {
+        .page-full-container .controls input[type="number"] {
+          width: 4.5em;
+          font-size: 1.2em;
+        }
+        .page-full-container .controls input[type="range"] {
+          width: 8em;
+        }
+      }
+      :fullscreen .controls input[type="number"] {
+        width: 4.5em;
+        min-width: 3.5em;
+        font-size: 1em;
+      }
+      @media (min-width: 901px) {
+        :fullscreen .controls input[type="number"] {
+          width: 5.5em;
+          min-width: 4.5em;
+          font-size: 1.2em;
+        }
+      }
     </style>
   </head>
   <body>
