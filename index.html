@@ -268,6 +268,19 @@
         align-items: center;
         gap: 0.3rem;
       }
+      .controls input[type="number"] {
+        background: #fff;
+        border: 1.5px solid #ccc;
+        border-radius: 5px;
+        padding: 0.15em 0.5em;
+        font-size: 1em;
+        transition: border 0.2s;
+        box-shadow: 0 1px 2px #0001;
+      }
+      .controls input[type="number"]:focus {
+        border: 1.5px solid #007aff;
+        outline: none;
+      }
 
       /* 色票選單 */
       .color-option {
@@ -280,7 +293,7 @@
       /* 新增 ColorSelect 樣式 */
       .color-select {
         position: relative;
-        min-width: 120px;
+        min-width: 84px;
         user-select: none;
       }
       .color-select__selected {
@@ -293,7 +306,7 @@
         border: 1px solid #ccc;
         background: #fff;
         color: #333;
-        min-width: 100px;
+        min-width: 70px;
         gap: 0.5em;
         height: 1.5em;
       }
@@ -524,12 +537,14 @@
 
           <label>
             <i class="fa-solid fa-font"></i> {{ langPack.font }}
-            <input type="range" min="35" max="100" step="1" v-model.number="fontSize" />
+            <input type="range" min="35" max="100" step="1" v-model.number="fontSize" style="width: 90px;" />
+            <input type="number" min="35" max="100" step="1" v-model.number="fontSize" style="width: 60px; margin-left: 0.5em;" @blur="checkFontSizeRange" @keyup.enter="checkFontSizeRange" />
           </label>
 
           <label>
             <i class="fa-solid fa-rocket"></i> {{ langPack.speed }}
-            <input type="range" min="1" max="40" step="1" v-model.number="speed" />
+            <input type="range" min="1" max="40" step="1" v-model.number="speed" style="width: 90px;" />
+            <input type="number" min="1" max="40" step="1" v-model.number="speed" style="width: 60px; margin-left: 0.5em;" @blur="checkSpeedRange" @keyup.enter="checkSpeedRange" />
           </label>
 
           <label style="gap:0.3rem;">
@@ -826,6 +841,11 @@
             refreshKey.value++;
           });
 
+          // 監聽 speed 變化
+          watch(speed, () => {
+            refreshKey.value++;
+          });
+
           // 監聽 window resize
           const resizeHandler = () => {
             refreshKey.value++;
@@ -857,6 +877,15 @@
             return Math.ceil(total / pxPerSec);
           });
 
+          const checkFontSizeRange = () => {
+            if (fontSize.value < 35) fontSize.value = 35;
+            if (fontSize.value > 100) fontSize.value = 100;
+          };
+          const checkSpeedRange = () => {
+            if (speed.value < 1) speed.value = 1;
+            if (speed.value > 40) speed.value = 40;
+          };
+
           return {
             script,
             isFullScreen,
@@ -877,6 +906,8 @@
             language,
             langPack,
             totalSeconds,
+            checkFontSizeRange,
+            checkSpeedRange,
           };
         },
         components: {
