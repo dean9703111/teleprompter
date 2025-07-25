@@ -681,7 +681,7 @@
         <span id="measure-span" style="visibility:hidden;position:fixed;left:-9999px;top:0;white-space:pre;font-size:inherit;font-family:inherit;z-index:-99;pointer-events:none;"></span>
         <!-- 右上角顯示預計秒數 -->
         <div style="position: fixed; top: 60px; right: 32px; z-index: 1100; font-size: 2.2rem; color: #fff; background: rgba(0,0,0,0.35); border-radius: 1em; padding: 0.3em 1.1em; pointer-events: none; text-align: center; min-width: 3.5em;">
-          {{ totalSeconds }}s
+          {{ formattedTime }}
         </div>
       </div>
     </div>
@@ -1001,6 +1001,18 @@
             return Math.max(0, Math.ceil((total - visible) / pxPerSec));
           });
 
+          // 新增 formattedTime 計算
+          const formattedTime = Vue.computed(() => {
+            const sec = totalSeconds.value;
+            if (sec >= 60) {
+              const m = Math.floor(sec / 60);
+              const s = sec % 60;
+              return `${m}m ${s}s`;
+            } else {
+              return `${sec}s`;
+            }
+          });
+
           // 柱子寬度
           const pillarWidthPercent = ref(0); // 0~50，預設0不顯示
           // 動態計算柱子寬度 px
@@ -1166,6 +1178,7 @@
             language,
             langPack,
             totalSeconds,
+            formattedTime,
             checkFontSizeRange,
             checkSpeedRange,
             // 柱子
