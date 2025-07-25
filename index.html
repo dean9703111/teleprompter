@@ -469,6 +469,54 @@
           font-size: 0.95rem;
         }
       }
+      /* 柱子繞字排版樣式 */
+      .pillar-visual {
+        position: absolute;
+        top: 6rem;
+        bottom: 2rem;
+        background: rgba(0,0,0,0.13);
+        border-radius: 30px;
+        z-index: 5;
+        pointer-events: none;
+        transition: width 0.2s;
+        left: 50%;
+        transform: translateX(-50%);
+        width: inherit;
+      }
+      .prompt-lines {
+        position: relative;
+        color: inherit;
+        font-size: inherit;
+        line-height: 1.6;
+        font-family: inherit;
+        max-width: 100vw;
+        margin: 0 auto;
+        padding: 0;
+        min-height: 85vh;
+        box-sizing: border-box;
+        z-index: 2;
+      }
+      .line-row {
+        display: flex;
+        align-items: flex-start;
+        width: 100%;
+        min-height: 1em;
+        margin-bottom: 0.10em;
+        flex-wrap: nowrap;
+        overflow: hidden;
+      }
+      .left-seg, .right-seg {
+        display: inline-block;
+        white-space: pre;
+        max-width: 48vw;
+        overflow-wrap: break-word;
+        word-break: break-all;
+      }
+      .pillar-gap {
+        display: inline-block;
+        height: 1em;
+        flex-shrink: 0;
+      }
     </style>
   </head>
   <body>
@@ -534,40 +582,46 @@
             <i v-else class="fa-solid fa-pause"></i>
             {{ playState === 'pause' ? langPack.play : langPack.pause }}
           </button>
-
           <label>
             <i class="fa-solid fa-font"></i> {{ langPack.font }}
             <input type="range" min="35" max="100" step="1" v-model.number="fontSize" style="width: 90px;" />
             <input type="number" min="35" max="100" step="1" v-model.number="fontSize" style="width: 60px; margin-left: 0.5em;" @blur="checkFontSizeRange" @keyup.enter="checkFontSizeRange" />
           </label>
-
           <label>
             <i class="fa-solid fa-rocket"></i> {{ langPack.speed }}
             <input type="range" min="1" max="40" step="1" v-model.number="speed" style="width: 90px;" />
             <input type="number" min="1" max="40" step="1" v-model.number="speed" style="width: 60px; margin-left: 0.5em;" @blur="checkSpeedRange" @keyup.enter="checkSpeedRange" />
           </label>
-
           <label style="gap:0.3rem;">
             <i class="fa-solid fa-palette"></i> {{ langPack.color }}
             <color-select v-model="bgColor" :colors="colors" :language="language"></color-select>
           </label>
-
+          <label>
+            <i class="fa-solid fa-grip-lines-vertical"></i> {{ langPack.gap }}
+            <input type="range" min="0" max="50" step="1" v-model.number="pillarWidthPercent" style="width: 90px;" />
+            <input type="number" min="0" max="50" step="1" v-model.number="pillarWidthPercent" style="width: 60px; margin-left: 0.5em;" />
+            <span style="margin-left:0.3em;">%</span>
+          </label>
           <button class="exit" @click="exitFull">
             <i class="fa-solid fa-xmark"></i>
             {{ langPack.exit }}
           </button>
         </div>
-
         <!-- 文字區 -->
         <div
           class="prompt-container"
-          :style="{ backgroundColor: bgColor, color: textColor, fontSize: fontSize + 'px' }"
+          :style="{ backgroundColor: bgColor, color: textColor, fontSize: fontSize + 'px', position: 'relative' }"
           ref="promptBox"
         >
-          <div style="height: 50vh; pointer-events: none; background: transparent;"></div>
-          <div class="prompt-text">{{ script }}</div>
-          <div style="height: 50vh; pointer-events: none; background: transparent;"></div>
+          <div class="pillar-visual" :style="pillarVisualStyle"></div>
+          <div style="position:relative;z-index:2;">
+            <div style="height: 50vh; pointer-events: none; background: transparent;"></div>
+            <div v-if="pillarWidthPercent > 0" class="prompt-lines" v-html="linesHtml"></div>
+            <div v-else class="prompt-text">{{ script }}</div>
+            <div style="height: 50vh; pointer-events: none; background: transparent;"></div>
+          </div>
         </div>
+        <span id="measure-span" style="visibility:hidden;position:fixed;left:-9999px;top:0;white-space:pre;font-size:inherit;font-family:inherit;z-index:-99;pointer-events:none;"></span>
         <!-- 右上角顯示預計秒數 -->
         <div style="position: fixed; top: 60px; right: 32px; z-index: 1100; font-size: 2.2rem; color: #fff; background: rgba(0,0,0,0.35); border-radius: 1em; padding: 0.3em 1.1em; pointer-events: none; text-align: center; min-width: 3.5em;">
           {{ totalSeconds }}s
@@ -578,7 +632,7 @@
     <!-- Vue 3 CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script>
-      const { createApp, onMounted, ref, watch } = Vue;
+      const { createApp, onMounted, ref, watch, nextTick } = Vue;
 
       // 新增 ColorSelect 元件
       const ColorSelect = {
@@ -722,6 +776,7 @@
               color: '顏色',
               shortcutTitle: '進入全螢幕後可用快捷鍵',
               follow: '追蹤我學習更多資訊',
+              gap: '間隔',
             },
             en: {
               title: 'Teleprompter',
@@ -738,6 +793,7 @@
               color: 'Color',
               shortcutTitle: 'Shortcuts in fullscreen',
               follow: 'Follow me for more tips',
+              gap: 'Gap',
             }
           };
           const langPack = Vue.computed(() => langPacks[language.value]);
@@ -870,11 +926,158 @@
           // 新增 totalSeconds 計算
           const totalSeconds = Vue.computed(() => {
             refreshKey.value;
+            // 取得實際內容高度
             if (!promptBox.value) return 0;
-            const total = promptBox.value.scrollHeight - promptBox.value.clientHeight;
-            const pxPerSec = speed.value * 0.1 * 60; // 修正這裡
+            let contentEl;
+            if (pillarWidthPercent.value > 0) {
+              // 有柱子時，內容在 .prompt-lines
+              contentEl = promptBox.value.querySelector('.prompt-lines');
+            } else {
+              // 無柱子時，內容在 .prompt-text
+              contentEl = promptBox.value.querySelector('.prompt-text');
+            }
+            if (!contentEl) return 0;
+            const total = contentEl.scrollHeight;
+            const visible = promptBox.value.clientHeight;
+            const pxPerSec = speed.value * 0.1 * 60;
             if (pxPerSec <= 0) return 0;
-            return Math.ceil(total / pxPerSec);
+            return Math.max(0, Math.ceil((total - visible) / pxPerSec));
+          });
+
+          // 柱子寬度
+          const pillarWidthPercent = ref(0); // 0~50，預設0不顯示
+          // 動態計算柱子寬度 px
+          const pillarWidthPx = Vue.computed(() => {
+            if (!promptBox.value) return 0;
+            return promptBox.value.offsetWidth * (pillarWidthPercent.value / 100);
+          });
+          // 讓稿件內容繞柱子排版
+          const linesHtml = ref('');
+          // 動態計算柱子寬度 px
+          const pillarVisualStyle = Vue.computed(() => ({
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: pillarWidthPx.value + 'px',
+          }));
+          function getPaddingPx(el) {
+            const cs = getComputedStyle(el);
+            return [
+              parseFloat(cs.paddingLeft) || 0,
+              parseFloat(cs.paddingRight) || 0
+            ];
+          }
+          function escapeHtml(text) {
+            return (text ?? '').replace(/[<>&"]/g, c => ({
+              '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;'
+            }[c]));
+          }
+          function renderLinesWithPillar({
+            text,
+            fontSize,
+            fontFamily,
+            promptBox,
+            promptLines,
+            pillarWidthPx
+          }) {
+            if (!promptBox || !promptLines) return '';
+            const containerWidth = promptBox.offsetWidth;
+            const [padL, padR] = getPaddingPx(promptLines);
+            const contentWidth = containerWidth - padL - padR;
+            const pillarWidth = pillarWidthPx;
+            const centerX = padL + contentWidth / 2;
+            const pillarLeft = centerX - pillarWidth / 2;
+            const pillarRight = centerX + pillarWidth / 2;
+            const margin = 8;
+            let measureSpan = document.getElementById('measure-span');
+            if (!measureSpan) {
+              measureSpan = document.createElement('span');
+              measureSpan.id = 'measure-span';
+              document.body.appendChild(measureSpan);
+            }
+            measureSpan.style.fontSize = fontSize + 'px';
+            measureSpan.style.fontFamily = fontFamily;
+            let html = '';
+            const paras = text.replace(/\r/g, '').split('\n');
+            for (let pi = 0; pi < paras.length; ++pi) {
+              let para = paras[pi];
+              if (!para) {
+                html += '<div class="line-row"><span class="left-seg">&nbsp;</span><span class="pillar-gap"></span><span class="right-seg"></span></div>';
+                continue;
+              }
+              while (para.length > 0) {
+                let left = '', right = '';
+                let i = 1;
+                for (; i <= para.length; ++i) {
+                  measureSpan.textContent = para.slice(0, i);
+                  if (measureSpan.offsetWidth < pillarLeft - padL - margin) {
+                    left = para.slice(0, i);
+                  } else {
+                    left = para.slice(0, i-1);
+                    right = para.slice(i-1);
+                    break;
+                  }
+                }
+                if (right === '' && left !== para) {
+                  right = para;
+                  left = '';
+                }
+                let rightSeg = '';
+                if (right) {
+                  let j = 1;
+                  for (; j <= right.length; ++j) {
+                    measureSpan.textContent = right.slice(0, j);
+                    if (measureSpan.offsetWidth < (contentWidth - (pillarRight - padL) - margin)) {
+                      rightSeg = right.slice(0, j);
+                    } else {
+                      rightSeg = right.slice(0, j-1);
+                      break;
+                    }
+                  }
+                }
+                if (right && rightSeg === '' && right.length > 0) rightSeg = right;
+                html += `<div class="line-row">`
+                  + `<span class="left-seg">${escapeHtml(left)}</span>`
+                  + `<span class="pillar-gap" style="width:${pillarWidth}px;min-width:${pillarWidth}px;"></span>`
+                  + `<span class="right-seg">${escapeHtml(rightSeg)}</span></div>`;
+                if (right) para = right.slice(rightSeg.length);
+                else para = '';
+              }
+            }
+            return html;
+          }
+          function updateLinesHtml() {
+            nextTick(() => {
+              linesHtml.value = renderLinesWithPillar({
+                text: script.value,
+                fontSize: fontSize.value,
+                fontFamily: "'Segoe UI', 'PingFang TC', sans-serif",
+                promptBox: promptBox.value,
+                promptLines: promptBox.value,
+                pillarWidthPx: pillarWidthPx.value
+              });
+            });
+          }
+          watch([script, fontSize, pillarWidthPercent, isAnyFull], () => {
+            if (isAnyFull.value) updateLinesHtml();
+          });
+          onMounted(() => {
+            document.addEventListener('fullscreenchange', fsHandler);
+            document.addEventListener('keydown', keyHandler);
+            window.addEventListener('resize', () => {
+              if (isAnyFull.value) {
+                updateLinesHtml();
+              }
+            });
+          });
+
+          Vue.onUnmounted(() => {
+            if (rafId) {
+              cancelAnimationFrame(rafId);
+              rafId = null;
+            }
+            document.removeEventListener('fullscreenchange', fsHandler);
+            document.removeEventListener('keydown', keyHandler);
+            window.removeEventListener('resize', resizeHandler);
           });
 
           const checkFontSizeRange = () => {
@@ -908,6 +1111,10 @@
             totalSeconds,
             checkFontSizeRange,
             checkSpeedRange,
+            // 柱子
+            pillarWidthPercent,
+            linesHtml,
+            pillarVisualStyle,
           };
         },
         components: {
